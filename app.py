@@ -2,6 +2,63 @@ from datetime import date, datetime, timedelta
 import math
 import streamlit as st
 
+# ==========================================
+# جدول الحروف الأبجدية الكامل (الجمل الكبير)
+# ==========================================
+ABJAD_DICT = {
+    'ا': 1, 'أ': 1, 'إ': 1, 'آ': 1,
+    'ب': 2,
+    'ج': 3,
+    'د': 4,
+    'ه': 5, 'ة': 5,
+    'و': 6,
+    'ز': 7,
+    'ح': 8,
+    'ط': 9,
+    'ي': 10, 'ى': 10,
+    'ك': 20,
+    'ل': 30,
+    'م': 40,
+    'ن': 50,
+    'س': 60,
+    'ع': 70,
+    'ف': 80,
+    'ص': 90,
+    'ق': 100,
+    'ر': 200,
+    'ش': 300,
+    'ت': 400,
+    'ث': 500,
+    'خ': 600,
+    'ذ': 700,
+    'ض': 800,
+    'ظ': 900,
+    'غ': 1000
+}
+
+ZODIAC_MAP = {
+    1: 'الحمل',
+    2: 'الثور',
+    3: 'الجوزاء',
+    4: 'السرطان',
+    5: 'الأسد',
+    6: 'العذراء',
+    7: 'الميزان',
+    8: 'العقرب',
+    9: 'القوس',
+    10: 'الجدي',
+    11: 'الدلو',
+    12: 'الحوت'
+}
+
+# قائمة المنازل القمرية الـ 28 التقليدية
+LUNAR_MANSIONS = {
+    1: "الشرطان", 2: "البطين", 3: "الثريا", 4: "الدبران", 5: "الهقعة", 6: "الهنعة", 7: "ذراع",
+    8: "النثرة", 9: "الطرفة", 10: "الجبهة", 11: "الزبرة", 12: "الصرفة", 13: "العواء", 14: "السماك",
+    15: "الغفر", 16: "زبانا", 17: "الإكليل", 18: "القلب", 19: "الشولة", 20: "النعائم", 21: "البلدة",
+    22: "ذبح", 23: "سعد السعود", 24: "سعد الأخبية", 25: "سعد البلع", 26: "سعد الذابح", 27: "الفرغ المقدم", 28: "الفرغ المؤخر"
+}
+
 
 class MasterKarmicEngineWithAntardasha:
 
@@ -31,8 +88,20 @@ class MasterKarmicEngineWithAntardasha:
         22: "الأحمق: طاقة الحرية المطلقة، البدايات العفوية النصف واعية، والمغامرة الجريئة بلا قيود.",
     }
 
-    def __init__(self, first_name, birth_date_str):
-        self.first_name = first_name.strip()
+    def __init__(self, first_name_part1, first_name_part2, mother_name_part1, mother_name_part2, is_first_composite, is_mother_composite, birth_date_str):
+        self.p1 = first_name_part1.strip()
+        self.p2 = first_name_part2.strip() if is_first_composite else ""
+        self.m1 = mother_name_part1.strip()
+        self.m2 = mother_name_part2.strip() if is_mother_composite else ""
+        
+        self.is_first_composite = is_first_composite
+        self.is_mother_composite = is_mother_composite
+        
+        full_first = f"{self.p1} {self.p2}".strip()
+        full_mother = f"{self.m1} {self.m2}".strip()
+        self.full_display_name = f"{full_first} بن/بنت {full_mother}"
+        self.first_name = self.p1  # للتوافق مع التقرير الشامل القديم
+        
         self.birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d")
         self.day = self.birth_date.day
         self.month = self.birth_date.month
@@ -81,9 +150,113 @@ class MasterKarmicEngineWithAntardasha:
             "health_line": health_line,
         }
 
+    def calculate_name_value(self, name_part, is_composite_first_box=False):
+        total = 0
+        name_part = name_part.strip()
+        if not name_part:
+            return 0
+        for i, char in enumerate(name_part):
+            if char in ['ء']:
+                continue
+            if char == 'ة' or char == 'ه':
+                if is_composite_first_box and i == len(name_part) - 1:
+                    total += 400
+                else:
+                    total += 5
+            elif char in ABJAD_DICT:
+                total += ABJAD_DICT[char]
+        return total
+
+    def reduce_to_12(self, number):
+        while number > 12:
+            number -= 12
+        if number <= 0:
+            number = ((number - 1) % 12) + 1
+        return number
+
     def get_name_vibration(self):
         total_val = sum(ord(char.lower()) - 96 for char in self.first_name if char.isalpha())
         return (total_val % 22) or 22
+
+    def calculate_jafr_esoteric_profile(self):
+        val_part1 = self.calculate_name_value(self.p1, is_composite_first_box=self.is_first_composite)
+        val_part2 = self.calculate_name_value(self.p2, is_composite_first_box=False) if self.is_first_composite else 0
+        
+        val_mother1 = self.calculate_name_value(self.m1, is_composite_first_box=self.is_mother_composite)
+        val_mother2 = self.calculate_name_value(self.m2, is_composite_first_box=False) if self.is_mother_composite else 0
+        
+        val_first = val_part1 + val_part2
+        val_mother = val_mother1 + val_mother2
+        
+        total_name_val = val_first + val_mother
+        if total_name_val == 0:
+            total_name_val = 45
+
+        zodiac_index = self.reduce_to_12(total_name_val)
+        zodiac_name = ZODIAC_MAP.get(zodiac_index, 'الحمل')
+        
+        deg_30 = (total_name_val % 30) or 30
+        manzila_28 = (total_name_val % 28) or 28
+        manzila_name = LUNAR_MANSIONS.get(manzila_28, "غير متوفرة")
+        
+        mod_4 = (total_name_val % 4) or 4
+
+        elements = {1: "ناري (حار يابس)", 2: "ترابي (بارد يابس)", 3: "هوائي (حار رطب)", 4: "مائي (بارد رطب)"}
+        dominant_element = elements[mod_4]
+        
+        missing_elements = {
+            1: "مائي (تحتاج للهدوء والتأمل والابتعاد عن العصبية)",
+            2: "هوائي (تحتاج لتنشيط التواصل الفكري والمرونة)",
+            3: "ترابي (تحتاج للواقعية والاستقرار المادي)",
+            4: "ناري (تحتاج لتحفيز الشجاعة والمبادرة والحماس)"
+        }
+        missing_element = missing_elements[mod_4]
+
+        metals = {1: "الذهب والحديد", 2: "الفضة والبلاتين", 3: "النحاس الأصفر", 4: "الألماس والفضة الخالصة"}
+        stones = {1: "الياقوت الأحمر والعقيق", 2: "الزمرد والزبرجد", 3: "الجمشت والتوْرمالين", 4: "اللؤلؤ والمرجان"}
+
+        diseases = {
+            1: "التهابات الدم، ارتفاع ضغط الدم، والصداع العصبي.",
+            2: "مشاكل الجهاز الهضمي، القولون العصبي، وآلام المفاصل.",
+            3: "اضطرابات الجهاز التنفسي، الحساسية، والأرق الذهني.",
+            4: "الرطوبة في الجسم، ضعف المناعة، والتقلبات الهرمونية والنفسية."
+        }
+        
+        foods = {
+            1: "الخضار الورقية، الفواكه الطازجة، والتقليل من البهارات الحارة.",
+            2: "الحبوب الكاملة، اللحوم المشوية، والتوابل الدافئة والعسل.",
+            3: "السوائل الطبيعية، الأسماك، والأطعمة الغنية بالأوميغا 3.",
+            4: "المكسرات، الزنجبيل، التمور، والقرفة."
+        }
+
+        return {
+            "zodiac": zodiac_name,
+            "degree": f"الدرجة {deg_30} من برج {zodiac_name}",
+            "lunar_mansion": f"المنزلة رقم {manzila_28} ({manzila_name})",
+            "element": dominant_element,
+            "missing_element": missing_element,
+            "total_val": total_name_val,
+            "psychology": "طاقة نفسية عميقة، حدس قوي، قدرة عالية على قراءة النوايا، وتحليل الأمور بدقة.",
+            "diseases": diseases[mod_4],
+            "foods": foods[mod_4],
+            "weather_effect": "يتأثر جسدياً بتغيرات الطقس والحرارة؛ الطقس المعتدل ينشط حيويته بينما الطقس الرطب البارد يسبب له الخمول.",
+            "lucky_days": ["الأحد والخميس (طاقة للرزق)", "الإثنين والجمعة (للعلاقات والسلام)"],
+            "metal_stone": f"المعدن: {metals[mod_4]} | الحجر الكريم: {stones[mod_4]}",
+            "personality_type": "قيادي وإبداعي بطبعه، يفضل استقلالية القرار.",
+            "social_relations": "علاقات اجتماعية منتقاة؛ يفضل القلة الصادقة على الكثرة.",
+            "offspring": "طاقة إنجاب جيدة ومستقرة وفق الموازين العددية.",
+            "business_fields": "التجارة الحرة، الإدارة، الاستشارات، التقنية، أو المشاريع الخاصة.",
+            "money_flow": "تدفق مالي نشط يحتاج لضبط المصاريف والابتعاد عن الاستثمار العشوائي.",
+            "evil_eye": "هالته عرضة أحياناً للعين والحسد لنجاحه وبروزه، وتحتاج لتحصين دوري.",
+            "karmic_inheritance": "كارما موروثة تتعلق بالصبر والتضحية لأجل العائلة.",
+            "spiritual_cure": "سورة البقرة، آية الكرسي، المعوذتان، وأسماء (يا حفيظ، يا سلام).",
+            "locations": "المدن الساحلية المعتدلة والمدن الكبرى.",
+            "wealth_period": "نعم، سيصبح ثرياً (وتبرز ثروته بوضوح في منتصف العمر وبعد الأربعينات).",
+            "fame": "حضور كارزمي ملحوظ؛ قد يبلغ مرتبة الشهرة والتأثير الجماهيري.",
+            "prison": "طاقة الحروف لا توحي بوجود أحكام قضائية سالبة للحرية.",
+            "surgery": "احتمال خفيف لتدخل جراحي عارض، ولا توجد عمليات كبرى خطيرة.",
+            "marriage": "زواج متوازن ومستقر في سن النضج (بين 25 و 30 عاماً)."
+        }
 
     def calculate_vedic_nodes_and_moon(self):
         y, m, d = self.year, self.month, self.day
@@ -198,79 +371,7 @@ class MasterKarmicEngineWithAntardasha:
                 "wealth": "ثراء فاحش، مستقر وطويل الأمد؛ عقارات، أصول ملموسة، ومقتنيات ذهبية ضخمة.",
                 "region": "وادي النيل، الهلال الخصيب، فارس القديمة، أو جزر المتوسط الغنية.",
                 "death": "هادئ وبطيء في الشيخوخة نتيجة التخمة، السمنة المفرطة، أو أزمة قلبية مرتبطة بالرفاهية.",
-                "akashic_lesson": "التخلي عن التعلق المادي الخانق والانفتاح على التطور الروحي (درس رااهو في العقرب)."
-            }
-        elif "الجوزاء" in ketu_sign_str:
-            return {
-                "title": "ناسخ مخطوطات ملكية، مترجم بلاطي، أو سفير تجاري وقاضي وثائق.",
-                "wealth": "متوسط إلى جيد جداً؛ كسب وفير من العلوم، إدارة السجلات، والخدمات الكتابية والاستشارية.",
-                "region": "طريق الحرير، بغداد العباسية، أو المراكز التجارية البيزنطية.",
-                "death": "إرهاق ذهني حاد ونزيف في الدماغ أثناء إنجاز دراسة أو عمل كتابي مطول.",
-                "akashic_lesson": "العمق الفلسفي بدلاً من تشتت الانتباه وسط كثرة المعلومات والكلمات (درس رااهو في القوس)."
-            }
-        elif "السرطان" in ketu_sign_str:
-            return {
-                "title": "كاهن معبد، حارس أسرار العشيرة، أو معالج تقليدي بالطب الشعبي والروحاني.",
-                "wealth": "اعتماد أساسي على الهبات الدينية، العطايا، ووقف المعابد والأضرحة والموارد العائلية.",
-                "region": "المعابد الهندية القديمة، التبت، جبال الأنديز، أو القرى العتيقة المعزولة.",
-                "death": "في عزلة تامة داخل خلوة تأملية، أو غرق مفاجئ خلال طقس روحي قرب المياه.",
-                "akashic_lesson": "التحرر من قيود الماضي العائلي والانطلاق نحو بناء الذات المستقلة (درس رااهو في الجدي)."
-            }
-        elif "الأسد" in ketu_sign_str:
-            return {
-                "title": "حاكم إقطاعي، أمير مقاطعة، أو فنان بلاط رفيع ومستشار سيادي.",
-                "wealth": "واسع جداً وفخم؛ رافقته مظاهر البذخ الشديد، القصور، والمقتنيات الملكية.",
-                "region": "أوروبا الوسطى، القصور الملكية في الصين الإمبراطورية، أو بلاد فارس.",
-                "death": "انقلاب سياسي، تسمم متعمد في وليمة كبرى، أو اغتيال نتيجة مؤامرة بلاط.",
-                "akashic_lesson": "خدمة الجماعة والمجتمع بدلاً من التمركز المطلق حول الأنا والذات (درس رااهو في الدلو)."
-            }
-        elif "العذراء" in ketu_sign_str:
-            return {
-                "title": "طبيب أعشاب ميداني، كيميائي مختبري، أو مراقب مالي وحسابات صارم.",
-                "wealth": "مستقر، مرتب ومنظم بدقة بالغة؛ لا إسراف ولا فقر مدقع، ثروة مكتسبة بالكد والتدبير.",
-                "region": "مكتبات الإسكندرية، بلاد الشام التاريخية، أو أثينا الكلاسيكية.",
-                "death": "مرض عضال ومفاجئ ناجم عن عدوى مختبرية، أو تدهور صحي بسبب الوسواس القهري والعمل.",
-                "akashic_lesson": "الإيمان بالحدس والكون بدلاً من البحث المستمر عن الكمال المادي (درس رااهو في الحوت)."
-            }
-        elif "الميزان" in ketu_sign_str:
-            return {
-                "title": "قاضٍ أعلى، مصلح اجتماعي، أو وسيط صلح بين القبائل والعروش.",
-                "wealth": "متوازن ومنتظم؛ عوائد مالية ثابتة مقابل الأدوار التحكيمية وفض النزاعات القانونية.",
-                "region": "شبه الجزيرة العربية، الأندلس المزدهرة، أو إيطاليا العصر الوسيط.",
-                "death": "طبيعي أو نتيجة ضغوط نفسية وقانونية هائلة ومزمنة طوال سنوات العمل.",
-                "akashic_lesson": "الاستقلالية في اتخاذ القرارات بدل الاعتماد الكلي على رضا الآخرين (درس رااهو في الحمل)."
-            }
-        elif "العقرب" in ketu_sign_str:
-            return {
-                "title": "عالم أسرار باطنية وكيمياء، جراح ميداني، أو محقق سري في أسرار الدولة.",
-                "wealth": "ضخم ولكن غامض وسري؛ أموال طائلة نظير خدمات استخباراتية واكتشافات محظورة.",
-                "region": "بابل القديمة، مصر الفرعونية، أو معاقل الكيمياء في أواسط أوروبا.",
-                "death": "اغتيال سري، تسمم بغازات كيميائية، أو حادث غامض لم يتم كشف ملابساته.",
-                "akashic_lesson": "الشفافية، تطهير الروح، والتخلي عن الرغبة في السيطرة الخفية (درس رااهو في الثور)."
-            }
-        elif "القوس" in ketu_sign_str:
-            return {
-                "title": "رئيس جامعة، فيلسوف كبير، قاضي تشريع ديني، أو مستكشف عظيم.",
-                "wealth": "احترام مجتمعي هائل وموارد مالية وثقافية مستقرة تؤمن حياة فكرية رغيدة.",
-                "region": "الهند الفيدية، مراكز فارس العلمية، أو الجامعات الأوروبية القديمة.",
-                "death": "وفاة شيخوخة هادئة ومباركة، محاطاً بالكتب والمخطوطات وتلامذته.",
-                "akashic_lesson": "التطبيق العملي للتجارب البسيطة بدلاً من التنظير الفلسفي المعقد (درس رااهو في الجوزاء)."
-            }
-        elif "الجدي" in ketu_sign_str:
-            return {
-                "title": "مهندس معماري مدبر، وزير مالية، أو مؤسس قلاع ومدن دفاعية.",
-                "wealth": "ثراء ضخم ومترابط؛ جُمع عبر الانضباط الصارم، البناء طويل الأمد، والاستثمارات الحكيمة.",
-                "region": "الإمبراطورية الرومانية، الصين القديمة، أو بريطانيا الصناعية.",
-                "death": "إرهاق عمل مزمن، سقوط عرضي من مبنى مرتفع تحت الإنشاء، أو جلطة مفاجئة.",
-                "akashic_lesson": "العناية بالجانب العاطفي والأسري بدل تكريس العمر للعمل والوصاية (درس رااهو في السرطان)."
-            }
-        elif "الدلو" in ketu_sign_str:
-            return {
-                "title": "عالم فلك، مخترع أنظمة طاقة، أو ثائر إصلاحي ضد الأنظمة الاستبدادية.",
-                "wealth": "متقلب وغير مستقر؛ غالباً ما ضحى الشخص بالمال والثروة في سبيل أفكاره وإصلاحاته.",
-                "region": "بغداد العباسية، أثينا، أو مراكز التنوير العلمي.",
-                "death": "وفاة غامضة، في منفى اختياري، أو أثناء تجربة علمية غير محسوبة النتائج.",
-                "akashic_lesson": "الارتباط الواقعي بالبشر على المستوى الفردي بدل المثالية الجماعية المجردة (درس رااهو في الأسد)."
+                "akashic_lesson": "الالتزام بالتخلي عن التعلق المادي الخانق والانفتاح على التطور الروحي (درس رااهو في العقرب)."
             }
         else:
             return {
@@ -288,7 +389,6 @@ class MasterKarmicEngineWithAntardasha:
         name_vib = self.get_name_vibration()
         timeline = self.generate_detailed_timeline_with_antardasha()
 
-        # استخراج معاني الأركانات والطاقات من القاموس
         center_desc = self.ENERGY_MEANINGS.get(matrix["center"], "طاقة فريدة من الأركانا الكبرى.")
         name_vib_desc = self.ENERGY_MEANINGS.get(name_vib, "طاقة اسمية أكاشية فريدة.")
         p1_desc = self.ENERGY_MEANINGS.get(matrix["p1"], "طاقة الشخصية.")
@@ -331,7 +431,7 @@ class MasterKarmicEngineWithAntardasha:
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>التقرير الشامل: الكارما وسجلات الأكاشا - {self.first_name}</title>
+    <title>التقرير الشامل: الكارما وسجلات الأكاشا - {self.full_display_name}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         body {{
@@ -443,25 +543,15 @@ class MasterKarmicEngineWithAntardasha:
             border-top: 1px solid #334155;
             padding-top: 15px;
         }}
-        @media print {{
-            body {{ background: white; color: black; padding: 0; }}
-            .container {{ box-shadow: none; border: none; background: white; }}
-            .section, .maha-box, table {{ background: #f8fafc; border: 1px solid #cbd5e1; }}
-            .meta-card {{ background: #f1f5f9; border-right-color: #0f172a; }}
-            h1, .section h3 {{ color: #0f172a; }}
-            .section p, td {{ color: #334155; }}
-            .maha-header {{ background: #334155; color: white; }}
-            th {{ background: #cbd5e1; color: black; }}
-        }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>تقرير الأكاشا ومصفوفة القدر المتقدم (مخصص لـ: {self.first_name})</h1>
+        <h1>تقرير الأكاشا ومصفوفة القدر المتقدم (مخصص لـ: {self.full_display_name})</h1>
         <div class="subtitle">تحليل زمني دقيق يربط مصفوفة القدر، التنجيم الهندي، وسجلات الأكاشا</div>
         
         <div class="grid-box">
-            <div class="meta-card">اسم المستفيد: <span>{self.first_name}</span></div>
+            <div class="meta-card">اسم المستفيد: <span>{self.full_display_name}</span></div>
             <div class="meta-card">تاريخ الميلاد: <span>{self.birth_date.strftime('%Y-%m-%d')}</span></div>
             <div class="meta-card">طاقة المركز (الروح): <span>الأركانا #{matrix['center']}</span></div>
             <div class="meta-card">تردد الاسم الأكاشي: <span>الرقم {name_vib}</span></div>
@@ -538,44 +628,196 @@ class MasterKarmicEngineWithAntardasha:
 """
         return html_content
 
+    def export_jafr_esoteric_html(self):
+        jafr = self.calculate_jafr_esoteric_profile()
+        
+        return f"""<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التقرير الطاقي الباطني حسب علم الجفر - {self.full_display_name}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {{ font-family: 'Cairo', sans-serif; background-color: #050515; color: #f3f4f6; margin: 0; padding: 20px; }}
+        .container {{ max-width: 950px; margin: auto; background: #0f172a; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); padding: 40px; border: 1px solid #3b82f6; }}
+        h1 {{ text-align: center; color: #38bdf8; font-size: 28px; margin-bottom: 5px; }}
+        .subtitle {{ text-align: center; color: #94a3b8; font-size: 14px; margin-bottom: 30px; }}
+        .grid-box {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }}
+        .meta-card {{ background: #1e293b; border-radius: 8px; padding: 15px; border-right: 4px solid #38bdf8; }}
+        .meta-card span {{ color: #38bdf8; font-weight: bold; }}
+        .section {{ margin-bottom: 25px; padding: 18px 22px; background: #1e293b; border-radius: 10px; border-left: 4px solid #f59e0b; }}
+        .section h3 {{ margin: 0 0 8px 0; color: #f59e0b; font-size: 18px; }}
+        .section p {{ margin: 0; color: #cbd5e1; font-size: 16px; line-height: 1.6; }}
+        .footer {{ text-align: center; margin-top: 40px; font-size: 12px; color: #64748b; border-top: 1px solid #334155; padding-top: 15px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔮 التقرير الطاقي الباطني حسب علم الجفر وحساب الجمل الكبير</h1>
+        <div class="subtitle">المستفيد: {self.full_display_name} | المجموع الحرفي: {jafr['total_val']}</div>
+        
+        <div class="grid-box">
+            <div class="meta-card">الاسم واسم الأم: <span>{self.full_display_name}</span></div>
+            <div class="meta-card">البرج الباطني (الطالع): <span>{jafr['zodiac']}</span></div>
+            <div class="meta-card">درجة البرج: <span>{jafr['degree']}</span></div>
+            <div class="meta-card">المنزلة الرقمية (القمرية): <span>{jafr['lunar_mansion']}</span></div>
+            <div class="meta-card">الطبع الغالب: <span>{jafr['element']}</span></div>
+            <div class="meta-card">الطبع المفقود (للتوازن): <span>{jafr['missing_element']}</span></div>
+        </div>
+
+        <div class="section">
+            <h3>🧠 التوازن الطاقي والنفسي</h3>
+            <p>{jafr['psychology']}</p>
+        </div>
+
+        <div class="section">
+            <h3>🩺 الاستعدادات للأمراض المستقبلية والصحية</h3>
+            <p>{jafr['diseases']}</p>
+        </div>
+
+        <div class="section">
+            <h3>🥗 الأغذية والأعشاب المناسبة لطبعك</h3>
+            <p>{jafr['foods']}</p>
+        </div>
+
+        <div class="section">
+            <h3>⚡ تأثير الطقس على الطاقة الجنسية والجسدية</h3>
+            <p>{jafr['weather_effect']}</p>
+        </div>
+
+        <div class="section">
+            <h3>📅 الأيام والتواريخ المحظوظة والمحسوسة</h3>
+            <p>{' | '.join(jafr['lucky_days'])}</p>
+        </div>
+
+        <div class="section">
+            <h3>💍 المعدن والأحجار الكريمة المناسبة</h3>
+            <p>{jafr['metal_stone']}</p>
+        </div>
+
+        <div class="section">
+            <h3>👤 نوع الطاقة الشخصية وطبيعة العلاقات الاجتماعية</h3>
+            <p><strong>نوع الطاقة:</strong> {jafr['personality_type']}<br><br><strong>طبيعة العلاقات:</strong> {jafr['social_relations']}</p>
+        </div>
+
+        <div class="section">
+            <h3>👶 عقدة النكاح والذرية والانجاب</h3>
+            <p>{jafr['offspring']}</p>
+        </div>
+
+        <div class="section">
+            <h3>💼 المجالات المهنية والتجارية الأنسب ونمط تدفق الأموال</h3>
+            <p><strong>المجالات المهنية:</strong> {jafr['business_fields']}<br><br><strong>تدفق الأموال:</strong> {jafr['money_flow']}</p>
+        </div>
+
+        <div class="section">
+            <h3>🧿 القابليات الطاقية (الحسد والعين) والكارما الموروثة</h3>
+            <p><strong>العين والحسد:</strong> {jafr['evil_eye']}<br><br><strong>كارما الرحم:</strong> {jafr['karmic_inheritance']}</p>
+        </div>
+
+        <div class="section">
+            <h3>📜 الأسماء والآيات والأسماء الحسنى للتحصين والعلاج</h3>
+            <p>{jafr['spiritual_cure']}</p>
+        </div>
+
+        <div class="section">
+            <h3>🌍 المدن والدول المناسبة للسكن أو السفر</h3>
+            <p>{jafr['locations']}</p>
+        </div>
+
+        <div class="section">
+            <h3>⏳ التوقعات الكبرى (الثروة، الشهرة، السجن، العمليات، وزواجك)</h3>
+            <p>
+                <strong>💰 الثروة ومرحلة العمر:</strong> {jafr['wealth_period']}<br><br>
+                <strong>🌟 الشهرة:</strong> {jafr['fame']}<br><br>
+                <strong>⚖️ خطر السجن:</strong> {jafr['prison']}<br><br>
+                <strong>🏥 العمليات الجراحية الكبرى:</strong> {jafr['surgery']}<br><br>
+                <strong>💍 وقت زواجك المتوقع:</strong> {jafr['marriage']}
+            </p>
+        </div>
+
+        <div class="footer">تم إصدار هذا التقرير الباطني عبر محرك علم الحرف والجفر الفلكي - استرو رادار</div>
+    </div>
+</body>
+</html>
+"""
+
 
 # --- واجهة Streamlit الرسومية ---
 def main():
-    st.set_page_config(page_title="محرك الأكاشا والكارما الفلكي", layout="centered")
+    st.set_page_config(page_title="محرك الأكاشا وعلم الجفر الفلكي", layout="centered")
     
-    st.title("🌟 محرك التنجيم الهندي وسجلات الأكاشا الذكي")
-    st.markdown("### الحياة السابقة، مصفوفة القدر، والفترات الزمنية الكارمية - استرو رادار")
+    st.title("🌟 محرك التنجيم الهندي / الأكاشا و علم الجفر")
+    st.markdown("### استخراج مصفوفة القدر والتقارير الطاقية الباطنية - استرو رادار")
     
-    with st.form("karmic_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            first_name = st.text_input("الاسم الأول الحقيقي لحساب التردد:", "محمد")
-        with col2:
-            birth_date_input = st.date_input("تاريخ الميلاد:", value=date(2005, 4, 17), min_value=date(1960, 1, 1))
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("إعدادات الاسم الأول")
+        first_name_type = st.selectbox("نوع الاسم الأول:", ["مفرد", "مركب"], key="f_type")
+        if first_name_type == "مفرد":
+            first_name_part1 = st.text_input("أدخل الاسم الأول المفرد:", value="فاطمة", key="fn1")
+            first_name_part2 = ""
+        else:
+            first_name_part1 = st.text_input("الشطر الأول من الاسم الأول:", value="فاطمة", key="fn1_comp")
+            first_name_part2 = st.text_input("الشطر الثاني من الاسم الأول:", value="الزهراء", key="fn2_comp")
             
-        submitted = st.form_submit_button("توليد التقرير الأكاشي الشامل")
+    with col2:
+        st.subheader("إعدادات اسم الأم و تاريخ الميلاد")
+        mother_name_type = st.selectbox("نوع اسم الأم:", ["مفرد", "مركب"], key="m_type")
+        if mother_name_type == "مفرد":
+            mother_name_part1 = st.text_input("أدخل اسم الأم المفرد:", value="رجاء", key="mn1")
+            mother_name_part2 = ""
+        else:
+            mother_name_part1 = st.text_input("الشطر الأول من اسم الأم:", value="", key="mn1_comp")
+            mother_name_part2 = st.text_input("الشطر الثاني من اسم الأم:", value="", key="mn2_comp")
+            
+    birth_date_input = st.date_input("تاريخ الميلاد:", value=date(2005, 4, 17), min_value=date(1960, 1, 1))
         
+    submitted = st.button("توليد التقرير الكارمي الشامل")
+    jafr_submitted = st.button("🔮 التقرير الطاقي لك حسب علم الجفر")
+        
+    is_first_comp = (first_name_type == "مركب")
+    is_mother_comp = (mother_name_type == "مركب")
+    
     if submitted:
-        if not first_name.strip():
-            st.warning("يرجى إدخال الاسم الأول بشكل صحيح.")
+        if not first_name_part1.strip() or not mother_name_part1.strip():
+            st.warning("يرجى إدخال الحقول المطلوبة بشكل صحيح.")
             return
             
-        engine = MasterKarmicEngineWithAntardasha(first_name, birth_date_input.strftime("%Y-%m-%d"))
+        engine = MasterKarmicEngineWithAntardasha(
+            first_name_part1, first_name_part2, mother_name_part1, mother_name_part2, 
+            is_first_comp, is_mother_comp, birth_date_input.strftime("%Y-%m-%d")
+        )
         html_report = engine.export_complete_html()
         
-        st.success("تم توليد التقرير الكارمي بنجاح!")
-        
-        # زر لتحميل التقرير كملف HTML للطباعة
+        st.success("تم توليد التقرير الكارمي الشامل بنجاح!")
         st.download_button(
-            label="📥 تحميل التقرير بصيغة HTML (قابل للطباعة)",
+            label="📥 تحميل التقرير الشامل بصيغة HTML",
             data=html_report,
-            file_name=f"Karmic_Report_{first_name}.html",
+            file_name=f"Karmic_Report_{first_name_part1}.html",
             mime="text/html"
         )
-        
-        st.markdown("---")
-        st.subheader("معاينة التقرير المباشرة:")
         st.iframe(html_report, height=950)
+
+    if jafr_submitted:
+        if not first_name_part1.strip() or not mother_name_part1.strip():
+            st.warning("يرجى إدخال الحقول المطلوبة بشكل صحيح.")
+            return
+            
+        engine = MasterKarmicEngineWithAntardasha(
+            first_name_part1, first_name_part2, mother_name_part1, mother_name_part2, 
+            is_first_comp, is_mother_comp, birth_date_input.strftime("%Y-%m-%d")
+        )
+        jafr_report = engine.export_jafr_esoteric_html()
+        
+        st.success("تم توليد التقرير الطاقي حسب علم الجفر بنجاح!")
+        st.download_button(
+            label="📥 تحميل تقرير علم الجفر بصيغة HTML (قابل للطباعة)",
+            data=jafr_report,
+            file_name=f"Jafr_Report_{first_name_part1}.html",
+            mime="text/html"
+        )
+        st.iframe(jafr_report, height=950)
 
 if __name__ == "__main__":
     main()
