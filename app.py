@@ -6,7 +6,7 @@ import streamlit as st
 # جدول الحروف الأبجدية الكامل (الجمل الكبير)
 # ==========================================
 ABJAD_DICT = {
-    'ا': 1, 'أ': 1, 'إ': 1, 'آ': 1,
+    'ا': 1, 'أ': 1, 'إ': 1, 'آ': 1, 'ء': 1,
     'ب': 2,
     'ج': 3,
     'د': 4,
@@ -156,8 +156,6 @@ class MasterKarmicEngineWithAntardasha:
         if not name_part:
             return 0
         for i, char in enumerate(name_part):
-            if char in ['ء']:
-                continue
             if char == 'ة' or char == 'ه':
                 if is_composite_first_box and i == len(name_part) - 1:
                     total += 400
